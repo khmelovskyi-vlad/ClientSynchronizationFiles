@@ -10,9 +10,8 @@ namespace ClientSynchronizationFiles
 {
     class NewFiles
     {
-        public NewFiles(List<FileStruct> filesPathsAndTimeCreateOrChangeFiles, Socket tcpSocket)
+        public NewFiles(Socket tcpSocket)
         {
-            this.filesPathsAndTimeCreateOrChangeFiles = filesPathsAndTimeCreateOrChangeFiles;
             this.tcpSocket = tcpSocket;
         }
 
@@ -21,10 +20,11 @@ namespace ClientSynchronizationFiles
 
         private byte[] buffer;
         private StringBuilder data;
-        List<FileStruct> filesPathsAndTimeCreateOrChangeFiles = new List<FileStruct>(); // delete  = new List<FileStruct>()
+        List<FileStruct> filesPathsAndTimeCreateOrChangeFiles = new List<FileStruct>();
 
         public void FirstCheckFiles()
         {
+            FirstAddFilesAndThemTime();
             AnswerServer();
             ReciveNewFiles();
         }
@@ -37,7 +37,7 @@ namespace ClientSynchronizationFiles
                 File.Delete(newFilesCount[i]);
                 if (data.ToString() != "?")
                 {
-                    File.AppendAllText(newFilesCount[i], data.ToString());
+                    File.AppendAllText(newFilesCount[i], data.Remove(0,1).ToString());
                 }
                 else
                 {
@@ -46,9 +46,10 @@ namespace ClientSynchronizationFiles
                 SendMessage("?");
             }
         }
+
         private List<string> FindNewFiles()
         {
-            var (filesPathsOnServer, listTimeCreateOrChangeFilesOnServer) = Split();
+            var (filesPathsOnServer, listTimeCreateOrChangeFilesOnServer) = SplitPathAndTime();
             var newFiles = new List<string>();
             for (int i = 0; i < filesPathsOnServer.Length; i++)
             {
@@ -92,7 +93,20 @@ namespace ClientSynchronizationFiles
             file.timeCreateOrChangeFile = File.GetLastWriteTime(filePath);
             filesPathsAndTimeCreateOrChangeFiles.Add(file);
         }
-        private (string[] filesPathsOnServer, DateTime[] listTimeCreateOrChangeFilesOnServer) Split()
+        private void FirstAddFilesAndThemTime()
+        {
+            var filesPaths = new List<string>();
+            filesPaths.AddRange(Directory.GetFiles(pathToFolder));
+            for (int i = 0; i < filesPaths.Count; i++)
+            {
+                AddFilesAndThemTimeToList(filesPaths[i]);
+            }
+        }
+        private string[] Split()
+        {
+            return data.ToString().Split('?');
+        }
+        private (string[] filesPathsOnServer, DateTime[] listTimeCreateOrChangeFilesOnServer) SplitPathAndTime()
         {
             var filesPathsOnServerStringArray = data.ToString().Split('?');
             var listTimeCreateOrChangeFilesOnServerArray = filesPathsOnServerStringArray[filesPathsOnServerStringArray.Length - 1].Split('*');
@@ -117,6 +131,60 @@ namespace ClientSynchronizationFiles
         private void SendMessage(string message)
         {
             tcpSocket.Send(Encoding.ASCII.GetBytes(message));
+        }
+        public void ChangeFiles()
+        {
+            while (true)
+            {
+                AnswerServer();
+                if (data.ToString() == "delete")
+                {
+                    var filesPaths = FindPaths();
+                    DeleterFiles(filesPaths);
+                }
+                else if (data.ToString() == "new")
+                {
+                    var filesPaths = FindPaths();
+                    AddNewOrChangeFiles(filesPaths);
+                }
+                else if (data.ToString() == "change")
+                {
+                    var filesPaths = FindPaths();
+                    DeleterFiles(filesPaths);
+                    AddNewOrChangeFiles(filesPaths);
+                }
+            }
+        }
+        private string[] FindPaths()
+        {
+            SendMessage("?");
+            AnswerServer();
+            var filesPaths = Split();
+            SendMessage("?");
+            return filesPaths;
+        }
+        private void AddNewOrChangeFiles(string[] filesPaths)
+        {
+            for (int i = 0; i < filesPaths.Length - 1; i++)
+            {
+                AnswerServer();
+                if (data.ToString() == "?")
+                {
+                    File.WriteAllText(filesPaths[i], "");
+                }
+                else
+                {
+                    File.WriteAllText(filesPaths[i], data.Remove(0, 1).ToString());
+                }
+                SendMessage("?");
+            }
+        }
+        private void DeleterFiles(string[] filesPaths)
+        {
+            for (int i = 0; i < filesPaths.Length - 1; i++)
+            {
+                File.Delete(filesPaths[i]);
+            }
         }
     }
 }
