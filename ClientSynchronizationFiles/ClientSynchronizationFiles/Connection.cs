@@ -16,11 +16,11 @@ namespace ClientSynchronizationFiles
 
         }
 
-        private const string ip2 = "192.168.0.106";
+        private const string ip2 = "192.168.1.12";
         private const int port = 2048;
         private Socket tcpSocket;
 
-        public void Client()
+        public void Run()
         {
             var tcpEndPoint = new IPEndPoint(IPAddress.Parse(ip2), port);
             using (tcpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))

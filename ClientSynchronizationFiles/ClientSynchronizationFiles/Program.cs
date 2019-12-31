@@ -11,7 +11,7 @@ namespace ClientSynchronizationFiles
         static void Main(string[] args)
         {
             Connection connection = new Connection();
-            connection.Client();
+            connection.Run();
         }
     }
 }
